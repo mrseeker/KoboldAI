@@ -371,14 +371,17 @@ if(not vars.model in ["InferKit", "Colab", "OAI", "ReadOnly"]):
         from transformers import pipeline, GPT2Tokenizer, GPT2LMHeadModel, GPTNeoForCausalLM, GPTNeoModel, AutoModel
         
         # If custom GPT Neo model was chosen
-        if(vars.model == "NeoCustom"):
-            model     = GPTNeoForCausalLM.from_pretrained(vars.custmodpth)
-            tokenizer = GPT2Tokenizer.from_pretrained(vars.custmodpth)
+        if(vars.model == "NeoCustom"):          
             # Is CUDA available? If so, use GPU, otherwise fall back to CPU
             if(vars.hascuda):
                 if(vars.usegpu):
+                    checkpoint = torch.load(vars.custmodpth + "/pytorch_model.bin", map_location="cuda:0")
+                    model = GPTNeoForCausalLM.from_pretrained(vars.custmodpth, state_dict=checkpoint).half().to("cuda").eval()
                     generator = pipeline('text-generation', model=model, tokenizer=tokenizer, device=0)
+                    tokenizer = GPT2Tokenizer.from_pretrained(vars.custmodpth)
                 elif(vars.breakmodel):  # Use both RAM and VRAM (breakmodel)
+                    model     = GPTNeoForCausalLM.from_pretrained(vars.custmodpth)
+                    tokenizer = GPT2Tokenizer.from_pretrained(vars.custmodpth)
                     n_layers = model.config.num_layers
                     breakmodel.total_blocks = n_layers
                     model.half().to('cpu')
@@ -409,8 +412,12 @@ if(not vars.model in ["InferKit", "Colab", "OAI", "ReadOnly"]):
                     GPTNeoModel.forward = breakmodel.new_forward
                     generator = model.generate
                 else:
+                    model     = GPTNeoForCausalLM.from_pretrained(vars.custmodpth)
+                    tokenizer = GPT2Tokenizer.from_pretrained(vars.custmodpth)
                     generator = pipeline('text-generation', model=model, tokenizer=tokenizer)
             else:
+                model     = GPTNeoForCausalLM.from_pretrained(vars.custmodpth)
+                tokenizer = GPT2Tokenizer.from_pretrained(vars.custmodpth)	
                 generator = pipeline('text-generation', model=model, tokenizer=tokenizer)
         # If custom GPT2 model was chosen
         elif(vars.model == "GPT2Custom"):
